@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Malla Curricular Veterinaria UDELAR</title>
+<style>
+ body { font-family: 'Segoe UI', sans-serif; background: #f7f7fb; margin: 20px; }
+ h1 { text-align: center; color: #444; }
+ .grid { display: flex; gap: 20px; overflow-x: auto; padding: 10px; }
+ .column { background: #ffffff; padding: 15px; border-radius: 12px; min-width: 260px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+ .column h2 { text-align: center; color: #333; }
+ .semester { margin-bottom: 20px; }
+ .semester h3 { color: #555; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+ .course { background: #e9eef7; padding: 8px; margin: 6px 0; border-radius: 8px; cursor: pointer; position: relative; }
+ .course.locked { background: #d8d8d8; cursor: not-allowed; }
+ .course.approved { background: #b6e3b0; text-decoration: line-through; }
+ .tooltip { display: none; position: absolute; left: 105%; top: 50%; transform: translateY(-50%); background: #333; color: #fff; padding: 6px 10px; border-radius: 6px; white-space: nowrap; font-size: 12px; }
+ .course.locked:hover .tooltip { display: block; }
+</style>
+</head>
+<body>
+<h1>Malla Curricular Veterinaria - UDELAR</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+const data = {
+  "Primer Año": {
+    "Primer semestre": [
+      "Bioquímica descriptiva", "Antomia sistemática", "IEV", "COE", "Biofísica", "Citología e histologia general"
+    ],
+    "Segundo semestre": [
+      "Bioquímica metabólica", "Anatomía Topográfica", "Histologia sistemática y embriología", "Etnología", "Etologia y bienestar animal", "Herramientas informáticas", "Inglés técnico"
+    ]
+  },
+  "Segundo Año": {
+    "Tercer semestre": [
+      "Fisiología I", "Microbiología", "Genética", "Bioestadistica I", "Experimentación animal", "Taller de ciencias sociales", "Taller de ética"
+    ],
+    "Cuarto semestre": [
+      "Fisiología II", "Inmunología", "Patología general", "Nutrición", "Parasitología", "Extensión veterinaria", "Desarrollo sustentable"
+    ]
+  },
+  "Tercer Año": {
+    "Quinto semestre": [
+      "Farmacología", "Patología especial", "Enfermedades parasitarias", "Toxicología", "Enfermedades infecciosas de rumiantes", "Epidemiologia veterinaria", "Técnica operatoria"
+    ],
+    "Sexto semestre": [
+      "Medicina de equinos I", "Medicina de pequeños animales I", "Enfermedades infecciosas no rumiantes", "Clínica semiológica", "Diseño de investigación y bioestadistica II", "Taller de etologia y bienestar en clínica", "Práctica clínica obligatoria (pequeños animales y equinos)", "Métodos paraclínicos"
+    ]
+  },
+  "Cuarto Año": {
+    "Séptimo semestre": [
+      "Economía", "Legislación veterinaria", "Reproducción animal", "Medicina de equinos II", "Medicina de pequeños animales II", "Medicina de rumiantes I", "Taller de epidemiologia y servicios oficiales veterinarios", "Internado de salud y reproducción de los rumiantes"
+    ],
+    "Octavo semestre": [
+      "Gestión de empresas", "Producción de bovinos", "Producción de ovinos y caprinos", "Alimentación", "Mejora genética", "Sistemas productivos", "Medicina de rumiantes II", "Teriogenología", "Taller de etologia y bienestar en animales de producción", "Práctica clínica obligatoria (módulo rumiantes)"
+    ]
+  },
+  "Quinto Año": {
+    "Noveno semestre": [
+      "Salud pública", "Microbiología alimentaria", "Inocuidad, Ciencia e industrialización de la carne", "Ciencia, tecnología e inspección de leche y productos lácteos", "Ciencia, tecnología e inocuidad de los recursos avícolas", "Producción y sanidad de animales de granja", "Producción y sanidad de organismos acuáticos"
+    ]
+  }
+};
+
+const prereq = {
+  "Bioquímica metabólica": ["Bioquímica descriptiva"],
+  "Anatomía Topográfica": ["Antomia sistemática"],
+  "Histologia sistemática y embriología": ["Citología e histologia general"],
+  "Fisiología I": ["Anatomía Topográfica", "Bioquímica metabólica", "Histologia sistemática y embriología", "Biofísica"],
+  "Microbiología": ["Antomia sistemática", "Bioquímica metabólica", "Histologia sistemática y embriología"],
+  "Genética": ["Bioquímica descriptiva", "Histologia sistemática y embriología"],
+  "Fisiología II": ["Fisiología I", "Etologia y bienestar animal"],
+  "Inmunología": ["Antomia sistemática", "Bioquímica descriptiva", "Histologia sistemática y embriología", "Microbiología"],
+  "Patología general": ["Anatomía Topográfica", "Fisiología I", "Genética", "Microbiología"],
+  "Nutrición": ["Anatomía Topográfica", "Fisiología I"],
+  "Parasitología": ["Fisiología I"],
+  "Farmacología": ["Fisiología II", "Inmunología"],
+  "Patología especial": ["Fisiología II", "Patología general"],
+  "Enfermedades parasitarias": ["Fisiología II", "Parasitología"],
+  "Toxicología": ["Fisiología II", "Patología general"],
+  "Enfermedades infecciosas de rumiantes": ["Fisiología II", "Inmunología", "Patología general", "Microbiología"],
+  "Medicina de equinos I": ["Farmacología", "Patología general", "Parasitología", "Toxicología"],
+  "Medicina de pequeños animales I": ["Farmacología", "Patología general", "Parasitología", "Toxicología"],
+  "Medicina de rumiantes I": ["Farmacología", "Patología general", "Parasitología", "Toxicología", "Enfermedades infecciosas de rumiantes"],
+  "Medicina de equinos II": ["Medicina de equinos I", "Patología especial", "Enfermedades parasitarias", "Técnica operatoria"],
+  "Medicina de pequeños animales II": ["Medicina de pequeños animales I", "Patología especial", "Enfermedades parasitarias", "Técnica operatoria"],
+  "Medicina de rumiantes II": ["Medicina de rumiantes I", "Patología especial", "Enfermedades parasitarias", "Técnica operatoria", "Reproducción animal"],
+  "Producción de bovinos": ["Medicina de rumiantes I", "Patología especial", "Enfermedades parasitarias", "Técnica operatoria", "Reproducción animal"],
+  "Producción de ovinos y caprinos": ["Medicina de rumiantes I", "Patología especial", "Enfermedades parasitarias", "Técnica operatoria", "Reproducción animal"],
+  "Mejora genética": ["Fisiología II", "Genética", "Diseño de investigación y bioestadistica II"]
+};
+
+const approved = JSON.parse(localStorage.getItem("courses") || "{}");
+
+function isLocked(course){
+  if(!prereq[course]) return false;
+  return prereq[course].some(r => !approved[r]);
+}
+
+function save(){ localStorage.setItem("courses", JSON.stringify(approved)); }
+
+function render(){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  Object.entries(data).forEach(([year, semesters]) => {
+    const col = document.createElement("div");
+    col.className = "column";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = year;
+    col.appendChild(h2);
+
+    Object.entries(semesters).forEach(([sem, courses]) => {
+      const semDiv = document.createElement("div");
+      semDiv.className = "semester";
+
+      const h3 = document.createElement("h3");
+      h3.textContent = sem;
+      semDiv.appendChild(h3);
+
+      courses.forEach(course => {
+        const div = document.createElement("div");
+        div.className = "course";
+        div.textContent = course;
+
+        if (approved[course]) div.classList.add("approved");
+        if (isLocked(course)) {
+          div.classList.add("locked");
+          const tip = document.createElement("div");
+          tip.className = "tooltip";
+          tip.textContent = "Falta: " + prereq[course].filter(r => !approved[r]).join(", ");
+          div.appendChild(tip);
+        } else {
+          div.addEventListener("click", () => {
+            approved[course] = !approved[course];
+            save();
+            render();
+          });
+        }
+
+        semDiv.appendChild(div);
+      });
+
+      col.appendChild(semDiv);
+    });
+
+    grid.appendChild(col);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
