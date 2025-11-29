@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Malla Curricular Veterinaria – UDELAR</title>
+<style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f7f9fb;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+    }
+    h1 { text-align: center; margin-bottom: 20px; }
+    h2 { margin-top: 50px; }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+    }
+
+    .semester {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .course {
+        padding: 8px 10px;
+        background: #e8eef5;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+        position: relative;
+    }
+
+    .course.completed {
+        background: #c6e8c4;
+        text-decoration: line-through;
+    }
+
+    .course.locked {
+        background: #ddd;
+        cursor: not-allowed;
+        color: #777;
+    }
+
+    /* Tooltip */
+    .course.locked:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 105%;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #333;
+        color: white;
+        padding: 6px 10px;
+        border-radius: 5px;
+        white-space: nowrap;
+        pointer-events: none;
+        font-size: 0.8em;
+    }
+</style>
+</head>
+
+<body>
+<h1>Malla Curricular Veterinaria – UDELAR</h1>
+
+
+<!-- ===================== MALLA ======================= -->
+<div id="malla" class="grid"></div>
+
+
+<script>
+// ==========================================================
+//  DEFINICIÓN DE LA MALLA (años → semestres → materias)
+// ==========================================================
+
+const mallaData = [
+    {
+        año: "PRIMER AÑO",
+        semestres: {
+            "Primer semestre": [
+                "Bioquímica descriptiva",
+                "Antomía sistemática",
+                "IEV",
+                "COE",
+                "Biofísica",
+                "Citología e histologia general"
+            ],
+            "Segundo semestre": [
+                "Bioquímica metabólica",
+                "Anatomía Topográfica",
+                "Histologia sistemática y embriología",
+                "Etnología",
+                "Etologia y bienestar animal",
+                "Herramientas informáticas",
+                "Inglés técnico"
+            ]
+        }
+    },
+    {
+        año: "SEGUNDO AÑO",
+        semestres: {
+            "Tercer semestre": [
+                "Fisiología |",
+                "Microbiología",
+                "Genética",
+                "Bioestadistica |",
+                "Experimentación animal",
+                "Taller de ciencias sociales",
+                "Taller de ética"
+            ],
+            "Cuarto semestre": [
+                "Fisiología ||",
+                "Inmunología",
+                "Patología general",
+                "Nutrición",
+                "Parasitología",
+                "Extensión veterinaria",
+                "Desarrollo sustentable"
+            ]
+        }
+    },
+    {
+        año: "TERCER AÑO",
+        semestres: {
+            "Quinto semestre": [
+                "Farmacología",
+                "Patología especial",
+                "Enfermedades parasitarias",
+                "Toxicología",
+                "Enfermedades infecciosas de rumiantes",
+                "Epidemiologia veterinaria",
+                "Técnica operatoria"
+            ],
+            "Sexto semestre": [
+                "Medicina de equinos |",
+                "Medicina de pequeños animales |",
+                "Enfermedades infecciosas no rumiantes",
+                "Clínica semiológica",
+                "Diseño de investigación y bioestadistica ||",
+                "Taller de etologia y bienestar en clínica",
+                "Práctica clínica obligatoria (pequeños animales y equinos)",
+                "Métodos paraclínicos"
+            ]
+        }
+    },
+    {
+        año: "CUARTO AÑO",
+        semestres: {
+            "Séptimo semestre": [
+                "Economía",
+                "Legislación veterinaria",
+                "Reproducción animal",
+                "Medicina de equinos ||",
+                "Medicina de pequeños animales ||",
+                "Medicina de rumiantes |",
+                "Taller de epidemiologia y servicios oficiales veterinarios",
+                "Internado de salud y reproducción de los rumiantes"
+            ],
+            "Octavo semestre": [
+                "Gestión de empresas",
+                "Producción de bovinos",
+                "Producción de ovinos y caprinos",
+                "Alimentación",
+                "Mejora genética",
+                "Sistemas productivos",
+                "Medicina de rumiantes ||",
+                "Teriogenología",
+                "Taller de etologia y bienestar en animales de producción",
+                "Práctica clínica obligatoria (módulo rumiantes)"
+            ]
+        }
+    },
+    {
+        año: "QUINTO AÑO",
+        semestres: {
+            "Noveno semestre": [
+                "Salud pública",
+                "Microbiología alimentaria",
+                "Inocuidad, Ciencia e industrialización de la carne",
+                "Ciencia, tecnología e inspección de leche y productos lácteos",
+                "Ciencia, tecnología e inocuidad de los recursos avícolas",
+                "Producción de sanidad de animales de granja",
+                "Producción y sanidad de organismos acuáticos"
+            ]
+        }
+    }
+];
+
+
+// ==========================================================
+//  GENERACIÓN AUTOMÁTICA DE PRERREQUISITOS SEGÚN "|", "||"
+// ==========================================================
+const prereqs = {};
+
+function addPrereq(next, prev) {
+    if (!prereqs[next]) prereqs[next] = [];
+    prereqs[next].push(prev);
+}
+
+// Detectar secuencias con | y ||
+function inferPrereqs() {
+    const allCourses = [];
+
+    mallaData.forEach(a => {
+        Object.values(a.semestres).forEach(sem => {
+            sem.forEach(c => allCourses.push(c));
+        });
+    });
+
+    allCourses.forEach(c => {
+        if (c.includes("||")) {
+            let base = c.replace("||", "|").trim();
+            addPrereq(c, base);
+        }
+        if (c.includes("|") && !c.includes("||")) {
+            let base = c.replace("|", "").trim();
+            // ejemplo: Medicina de equinos | → prereq: nada
+        }
+    });
+}
+inferPrereqs();
+
+
+// ==========================================================
+//  RENDER DE LA MALLA
+// ==========================================================
+const container = document.getElementById("malla");
+const estado = JSON.parse(localStorage.getItem("progresoMalla") || "{}");
+
+function guardar() {
+    localStorage.setItem("progresoMalla", JSON.stringify(estado));
+}
+
+function estaAprobada(nombre) {
+    return estado[nombre] === true;
+}
+
+function requisitosCumplidos(nombre) {
+    if (!prereqs[nombre]) return true;
+    return prereqs[nombre].every(r => estaAprobada(r));
+}
+
+function renderMalla() {
+    container.innerHTML = "";
+
+    mallaData.forEach(a => {
+        Object.entries(a.semestres).forEach(([semNombre, cursos]) => {
+
+            const semDiv = document.createElement("div");
+            semDiv.className = "semester";
+
+            const title = document.createElement("h3");
+            title.textContent = `${a.año} – ${semNombre}`;
+            semDiv.appendChild(title);
+
+            cursos.forEach(curso => {
+                const div = document.createElement("div");
+                div.className = "course";
+                div.textContent = curso;
+
+                const aprobado = estaAprobada(curso);
+                const cumple = requisitosCumplidos(curso);
+
+                if (aprobado) div.classList.add("completed");
+                if (!cumple && !aprobado) {
+                    div.classList.add("locked");
+                    div.dataset.tooltip = "Requiere aprobar: " + prereqs[curso].join(", ");
+                }
+
+                div.onclick = () => {
+                    if (div.classList.contains("locked")) return;
+
+                    estado[curso] = !estaAprobada(curso);
+                    guardar();
+                    renderMalla();
+                };
+
+                semDiv.appendChild(div);
+            });
+
+            container.appendChild(semDiv);
+        });
+    });
+}
+
+renderMalla();
+
+</script>
+</body>
+</html>
